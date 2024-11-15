@@ -66,7 +66,7 @@
     <p>This project does not have a license and is intended for educational purposes as part of a university group project.</p>
 
   <h2>⬇️ Download</h2>
-    <p>The latest release can be downloaded from the <a href="https://github.com/de4ltt/KubMarket/releases">Releases</a> section of this repository.</p>
+    <p>The latest release can be downloaded from the <a href="https://github.com/de4ltt/bestMarketPlaceEver/releases">Releases</a> section of this repository.</p>
 </div>
 
 </body>
