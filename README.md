@@ -48,7 +48,7 @@
  <h2 id="setup">⚙️ Setup Instructions</h2>
     <ol>
         <li>Clone the repository:
-            <div class="code-block"><code>git clone https://github.com/de4ltt/KubMarket.git</code></div>
+            <div class="code-block"><code>git clone https://github.com/VACdotCS/bestMarketPlaceEver.git</code></div>
         </li>
         <li>Open the project in Android Studio.</li>
         <li>Build the project to install dependencies and compile resources.</li>
@@ -64,9 +64,6 @@
 
   <h2 id="license">📜 License</h2>
     <p>This project does not have a license and is intended for educational purposes as part of a university group project.</p>
-
-  <h2>⬇️ Download</h2>
-    <p>The latest release can be downloaded from the <a href="https://github.com/de4ltt/bestMarketPlaceEver/releases">Releases</a> section of this repository.</p>
 </div>
 
 </body>
