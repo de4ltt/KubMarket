@@ -11,8 +11,8 @@
     <h1>📱 KubMarket</h1>
     <p><strong>KubMarket</strong> is a university group project, created as a marketplace app with role-specific features to streamline order handling and pickup management. The app supports three user roles, each with distinct functionality to meet diverse needs.</p>
 
- <h2 id="screenshots">📱 Screenshots</h2>
-<img src="https://github.com/de4ltt/KubMarket/blob/master/kub_market.jpg" alt="KubMarket UI" width="100%">
+ <h2 id="screenshots">📸 Screenshots</h2>
+<img src="https://github.com/de4ltt/KubMarket/blob/master/kub-market.jpg" alt="KubMarket UI" width="100%">
 
  <h2 id="about">📖 About the Project</h2>
     <p>KubMarket offers a role-based marketplace experience with functionalities that adapt based on the user's account type:</p>
