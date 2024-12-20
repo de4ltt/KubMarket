@@ -2,7 +2,7 @@ package com.kire.market_place_android.data.remote.dto
 
 object HttpRoutes {
 
-    private const val BASE_URL = "http://195.43.142.92/api/v1"
+    private const val BASE_URL = "http://192.168.148.135:8081/api/v1"
 
     //Authentication
     const val AUTH_LOGIN = "$BASE_URL/auth"

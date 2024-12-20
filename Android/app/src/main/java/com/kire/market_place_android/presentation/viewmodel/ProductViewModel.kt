@@ -16,8 +16,11 @@ import com.kire.market_place_android.presentation.model.product.CartUiEvent
 import com.kire.market_place_android.presentation.model.product.Category
 import com.kire.market_place_android.presentation.model.product.Product
 import com.kire.market_place_android.presentation.model.product.ProductUiEvent
+import com.kire.market_place_android.presentation.util.VProductType
+import com.kire.market_place_android.presentation.util.isProductValid
 
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Dispatchers
 
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -50,117 +53,108 @@ class ProductViewModel @Inject constructor(
 
     fun onEvent(event: CartUiEvent) {
         when (event) {
-            is CartUiEvent.productSelect -> {
-                if (!_cartState.value.toBuy.map { it.id }.contains(event.product.id))
-                    _cartState.value = _cartState.value.copy(
-                        toBuy = _cartState.value.toBuy.plusElement(event.product)
-                    )
-                else
-                    _cartState.value = _cartState.value.copy(
-                        toBuy = _cartState.value.toBuy.filter { it.id != event.product.id }
-                    )
-            }
-
-            is CartUiEvent.chooseQuantity -> {
-                _cartState.value = _cartState.value.copy(
-                    toBuy = _cartState.value.toBuy.map {
-                        if (it.id == event.productId)
-                            it.copy(chosenQuantity = event.chosenQuantity)
-                        else it
-                    }
-                )
-            }
-
-            is CartUiEvent.deleteFromCart -> {
-                _cartState.value = _cartState.value.copy(
-                    allProductsInCart = _cartState.value.allProductsInCart.filter { it.id != event.productId },
-                    toBuy = _cartState.value.toBuy.filter { it.id != event.productId }
-                )
-            }
-
-            is CartUiEvent.addToCart -> {
-                if (!_cartState.value.allProductsInCart.map { it.id }.contains(event.product.id))
-                    _cartState.value = _cartState.value.copy(
-                        allProductsInCart = _cartState.value.allProductsInCart.plusElement(event.product),
-                        toBuy = _cartState.value.toBuy.plusElement(event.product)
-                    )
-                else
-                    _cartState.value = _cartState.value.copy(
-                        toBuy = _cartState.value.toBuy.map {
-                            if (it.id == event.product.id)
-                                it.copy(chosenQuantity = it.chosenQuantity + event.product.chosenQuantity)
-                            else it
-                        }
-                    )
-            }
-
-            is CartUiEvent.changeChosenProduct -> {
-                _chosenProduct.value = event.chosenProduct
-            }
+            is CartUiEvent.productSelect -> selectProduct(event.product)
+            is CartUiEvent.chooseQuantity -> chooseQuantity(event.chosenQuantity, event.productId)
+            is CartUiEvent.deleteFromCart -> deleteFromCart(event.productId)
+            is CartUiEvent.addToCart -> addToCart(event.product)
+            is CartUiEvent.changeChosenProduct -> changeChosenProduct(event.chosenProduct)
         }
     }
 
     fun onEvent(event: ProductUiEvent) {
         when (event) {
-            is ProductUiEvent.ItemCategoryChanged -> {
-                if (event.itemCategory.matches("[а-яёА-ЯЁ]*".toRegex()))
-                    _chosenProduct.value = _chosenProduct.value.copy(category = event.itemCategory)
+            is ProductUiEvent.ChangeItemCategory,
+            is ProductUiEvent.ChangeItemDescription,
+            is ProductUiEvent.ChangeItemDiscountPrice,
+            is ProductUiEvent.ChangeItemMeasure,
+            is ProductUiEvent.ChangeItemName,
+            is ProductUiEvent.ChangeItemPrice,
+            is ProductUiEvent.ChangeItemStored -> updateProductParameters(
+                event.value.isProductValid(event.category)
+            ) {
+                updateChosenProduct { copy(category = event.value) }
             }
 
-            is ProductUiEvent.ItemDescriptionChanged -> {
-                if (event.itemDescription.matches("[а-яёА-ЯЁ\\s]+".toRegex()))
-                    _chosenProduct.value =
-                        _chosenProduct.value.copy(description = event.itemDescription)
-            }
-
-            is ProductUiEvent.ItemDiscountPriceChanged -> {
-                if (event.itemDiscountPrice.matches("[1-9]\\d*(\\.\\d{0,2})?".toRegex()))
-                    _chosenProduct.value =
-                        _chosenProduct.value.copy(discountPrice = event.itemDiscountPrice.toBigDecimal())
-            }
-
-            is ProductUiEvent.ItemMeasureChanged -> {
-                if (event.itemUnit.matches("[а-яё]*".toRegex()))
-                    _chosenProduct.value = _chosenProduct.value.copy(unit = event.itemUnit)
-            }
-
-            is ProductUiEvent.ItemNameChanged -> {
-                if (event.itemName.matches("[а-яёА-ЯЁ\\s]+".toRegex()))
-                    _chosenProduct.value = _chosenProduct.value.copy(title = event.itemName)
-            }
-
-            is ProductUiEvent.ItemPriceChanged -> {
-                if (event.itemPrice.matches("[1-9]\\d*(\\.\\d{0,2})?".toRegex()))
-                    _chosenProduct.value =
-                        _chosenProduct.value.copy(price = event.itemPrice.toBigDecimal())
-            }
-
-            is ProductUiEvent.ItemStoredChanged -> {
-                if (event.itemStored.matches("\\d+".toRegex()))
-                    _chosenProduct.value =
-                        _chosenProduct.value.copy(quantityAvailable = event.itemStored.toInt())
-            }
-
-            is ProductUiEvent.AddItem -> {
-                addProduct(event.image, event.item)
-            }
-
-            is ProductUiEvent.DeleteItem -> {
-                //TODO
-            }
-
-            is ProductUiEvent.SelectItem -> {
-                _chosenProduct.value = event.item
-            }
+            is ProductUiEvent.AddItem -> addProduct(event.image, event.item)
+            is ProductUiEvent.DeleteItem -> deleteProduct(event.item)
+            is ProductUiEvent.SelectItem -> updateChosenProduct { event.item }
         }
     }
 
-    fun makeRequestResultIdle() {
+
+    private fun updateProductParameters(check: Boolean, update: () -> Unit) =
+        viewModelScope.launch(Dispatchers.Default) {
+            if (check) update()
+        }
+
+    private fun changeChosenProduct(product: Product) =
+        viewModelScope.launch(Dispatchers.Default) {
+            _chosenProduct.value = product
+        }
+
+    private fun addToCart(product: Product) {
+
+        updateCartState {
+
+            if (!_cartState.value.allProductsInCart.map { it.id }.contains(product.id))
+                copy(
+                    allProductsInCart = _cartState.value.allProductsInCart.plusElement(product),
+                    toBuy = _cartState.value.toBuy.plusElement(product)
+                )
+            else
+                copy(
+                    toBuy = _cartState.value.toBuy.map {
+                        if (it.id == product.id)
+                            it.copy(chosenQuantity = it.chosenQuantity + product.chosenQuantity)
+                        else it
+                    }
+                )
+        }
+    }
+
+    private fun chooseQuantity(chosenQuantity: Int, productId: Int) {
+        updateCartState {
+            copy(
+                toBuy = _cartState.value.toBuy.map {
+                    if (it.id == productId)
+                        it.copy(chosenQuantity = chosenQuantity)
+                    else it
+                }
+            )
+        }
+    }
+
+    private fun deleteFromCart(productId: Int) {
+        updateCartState {
+            copy(
+                allProductsInCart = _cartState.value.allProductsInCart.filter { it.id != productId },
+                toBuy = _cartState.value.toBuy.filter { it.id != productId }
+            )
+        }
+    }
+
+    private fun selectProduct(product: Product) {
+
+        val cartStateValue = _cartState.value
+
+        updateCartState {
+
+            copy(
+                toBuy =
+                if (!cartStateValue.toBuy.map { it.id }.contains(product.id))
+                    cartStateValue.toBuy.plusElement(product)
+                else
+                    cartStateValue.toBuy.filter { it.id != product.id }
+            )
+        }
+    }
+
+    fun makeRequestResultIdle() = viewModelScope.launch(Dispatchers.Default) {
         _requestResult.value = IRequestResult.Idle
     }
 
     fun refreshProducts() =
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             _requestResult.value =
                 commonUseCases.getAllProductsUseCase().toPresentation<List<ProductDomain>>()
                     .also { result ->
@@ -172,9 +166,10 @@ class ProductViewModel @Inject constructor(
         }
 
     fun getAllCategories() =
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             _requestResult.value =
-                commonUseCases.getAllAvailableCategoriesUseCase().toPresentation<List<CategoryDomain>>()
+                commonUseCases.getAllAvailableCategoriesUseCase()
+                    .toPresentation<List<CategoryDomain>>()
                     .also { result ->
                         if (result is IRequestResult.Success<*>)
                             _allCategories.value = (result.data as List<*>).map {
@@ -184,7 +179,7 @@ class ProductViewModel @Inject constructor(
         }
 
     fun updateProductById(id: Int, image: ByteArray, product: Product) =
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             _requestResult.value = adminUseCases.updateProductUseCase(
                 id = id,
                 image = image,
@@ -193,10 +188,25 @@ class ProductViewModel @Inject constructor(
         }
 
     fun addProduct(image: ByteArray, product: Product) =
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             _requestResult.value = adminUseCases.addProductUseCase(
                 image = image,
                 product = product.toDomain()
             ).toPresentation<Nothing>()
+        }
+
+    fun deleteProduct(product: Product) =
+        viewModelScope.launch(Dispatchers.IO) {
+            //TODO
+        }
+
+    private fun updateCartState(update: CartState.() -> CartState) =
+        viewModelScope.launch(Dispatchers.Default) {
+            _cartState.value = _cartState.value.update()
+        }
+
+    private fun updateChosenProduct(update: Product.() -> Product) =
+        viewModelScope.launch(Dispatchers.Default) {
+            _chosenProduct.value = _chosenProduct.value.update()
         }
 }

@@ -18,6 +18,7 @@ import com.kire.market_place_android.presentation.model.order.Order
 import com.kire.market_place_android.presentation.model.pick_up_point.PickUpPoint
 
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Dispatchers
 
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -30,9 +31,10 @@ import javax.inject.Inject
 @HiltViewModel
 class ManagerViewModel @Inject constructor(
     private val managerUseCases: IManagerUseCases
-): ViewModel() {
+) : ViewModel() {
 
-    private val _requestResult: MutableStateFlow<IRequestResult> = MutableStateFlow(IRequestResult.Idle)
+    private val _requestResult: MutableStateFlow<IRequestResult> =
+        MutableStateFlow(IRequestResult.Idle)
     val requestResult: StateFlow<IRequestResult> = _requestResult.asStateFlow()
 
     private val _order: MutableStateFlow<Order> = MutableStateFlow(Order())
@@ -41,52 +43,72 @@ class ManagerViewModel @Inject constructor(
     private val _pickUpPoint: MutableStateFlow<PickUpPoint> = MutableStateFlow(PickUpPoint())
     val pickUpPoint: StateFlow<PickUpPoint> = _pickUpPoint.asStateFlow()
 
-    private val _managerOrderState: MutableStateFlow<ManagerOrderState> = MutableStateFlow(ManagerOrderState())
+    private val _managerOrderState: MutableStateFlow<ManagerOrderState> =
+        MutableStateFlow(ManagerOrderState())
     val managerOrderState: StateFlow<ManagerOrderState> = _managerOrderState.asStateFlow()
 
     fun onEvent(event: ManagerOrderUiEvent) {
-        when(event) {
-            is ManagerOrderUiEvent.productSelect -> {
-                if (!_managerOrderState.value.received.contains(event.id))
-                    _managerOrderState.value = _managerOrderState.value.copy(
-                        received = _managerOrderState.value.received.plusElement(event.id),
-                        returned = _managerOrderState.value.returned.minusElement(event.id)
-                    )
-                else
-                    _managerOrderState.value = _managerOrderState.value.copy(
-                        received = _managerOrderState.value.received.minusElement(event.id),
-                        returned = _managerOrderState.value.returned.plus(event.id)
-                    )
-            }
-            ManagerOrderUiEvent.confirmOrder -> {
-                confirmOrder(
-                    id = _order.value.orderId,
-                    received = _managerOrderState.value.received,
-                    returned = _managerOrderState.value.returned
-                )
-            }
+        when (event) {
+
+            is ManagerOrderUiEvent.productSelect -> selectProduct(event.id)
+
+            ManagerOrderUiEvent.confirmOrder -> confirmOrder(
+                id = _order.value.orderId,
+                received = _managerOrderState.value.received,
+                returned = _managerOrderState.value.returned
+            )
         }
     }
 
-    fun makeRequestResultIdle() {
+    private fun updateManagerOrderState(update: ManagerOrderState.() -> ManagerOrderState) =
+        viewModelScope.launch(Dispatchers.Default) {
+            _managerOrderState.value = _managerOrderState.value.update()
+        }
+
+    private fun selectProduct(id: Int) = viewModelScope.launch(Dispatchers.Default) {
+
+        val managerOrderStateValue = _managerOrderState.value
+        val received = managerOrderStateValue.received
+        val returned = managerOrderStateValue.returned
+
+        updateManagerOrderState {
+            if (!received.contains(id))
+                copy(
+                    received = received.plusElement(id),
+                    returned = returned.minusElement(id)
+                )
+            else
+                copy(
+                    received = received.minusElement(id),
+                    returned = returned.plus(id)
+                )
+        }
+    }
+
+    fun makeRequestResultIdle() = viewModelScope.launch(Dispatchers.Default) {
         _requestResult.value = IRequestResult.Idle
     }
 
     fun getOrderedProductsByOrderId(id: Int) =
-        viewModelScope.launch {
-            _requestResult.value = managerUseCases.getOrderedProductsByOrderIdUseCase(id = id).toPresentation<OrderDomain>()
+        viewModelScope.launch(Dispatchers.IO) {
+            _requestResult.value = managerUseCases.getOrderedProductsByOrderIdUseCase(id = id)
+                .toPresentation<OrderDomain>()
                 .also { result ->
                     if (result is IRequestResult.Success<*>)
                         _order.value = (result.data as OrderDomain).toPresentation()
                             .also {
-                                _managerOrderState.value = _managerOrderState.value.copy(returned = it.products.map { it.product.id })
+                                _managerOrderState.value =
+                                    _managerOrderState.value.copy(
+                                        returned = it.products.map { it.product.id }
+                                    )
                             }
                 }
         }
 
     fun getPickUpPointByManagerId(id: Int) =
-        viewModelScope.launch {
-            _requestResult.value = managerUseCases.getPickUpPointByManagerId(id = id).toPresentation<PickUpPointDomain>()
+        viewModelScope.launch(Dispatchers.IO) {
+            _requestResult.value = managerUseCases.getPickUpPointByManagerId(id = id)
+                .toPresentation<PickUpPointDomain>()
                 .also { result ->
                     if (result is IRequestResult.Success<*>) {
                         _pickUpPoint.value = (result.data as PickUpPointDomain).toPresentation()
@@ -95,7 +117,7 @@ class ManagerViewModel @Inject constructor(
         }
 
     private fun confirmOrder(id: Int, received: List<Int>, returned: List<Int>) =
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             _requestResult.value = managerUseCases.confirmOrderUseCase(
                 id = id,
                 received = received,

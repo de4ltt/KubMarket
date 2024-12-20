@@ -213,7 +213,7 @@ fun AdminPanelItemsEditScreen(
                             icon = R.drawable.name_icon,
                             hint = Strings.ENTER_NAME,
                             onTextValueChange = {
-                                productViewModel.onEvent(ProductUiEvent.ItemNameChanged(it))
+                                productViewModel.onEvent(ProductUiEvent.ChangeItemName(it))
                             },
                             textValue = product.title
                         )
@@ -225,7 +225,7 @@ fun AdminPanelItemsEditScreen(
                             icon = R.drawable.tag,
                             hint = Strings.ENTER_CATEGORY,
                             onTextValueChange = {
-                                productViewModel.onEvent(ProductUiEvent.ItemCategoryChanged(it))
+                                productViewModel.onEvent(ProductUiEvent.ChangeItemCategory(it))
                             },
                             textValue = product.category
                         )
@@ -248,7 +248,7 @@ fun AdminPanelItemsEditScreen(
                                     hint = Strings.RUB_NUM,
                                     isTextCentered = true,
                                     onTextValueChange = {
-                                        productViewModel.onEvent(ProductUiEvent.ItemPriceChanged(it))
+                                        productViewModel.onEvent(ProductUiEvent.ChangeItemPrice(it))
                                     },
                                     textValue =
                                         if (product.price == 0.0.toBigDecimal() ) ""
@@ -264,7 +264,7 @@ fun AdminPanelItemsEditScreen(
                                     hint = Strings.SCALE,
                                     isTextCentered = true,
                                     onTextValueChange = {
-                                        productViewModel.onEvent(ProductUiEvent.ItemMeasureChanged(it))
+                                        productViewModel.onEvent(ProductUiEvent.ChangeItemMeasure(it))
                                     },
                                     textValue = product.unit
                                 )
@@ -279,7 +279,7 @@ fun AdminPanelItemsEditScreen(
                                     hint = Strings.RUB_NUM,
                                     isTextCentered = true,
                                     onTextValueChange = {
-                                        productViewModel.onEvent(ProductUiEvent.ItemDiscountPriceChanged(it))
+                                        productViewModel.onEvent(ProductUiEvent.ChangeItemDiscountPrice(it))
                                     },
                                     textValue =
                                         if (product.discountPrice == 0.0.toBigDecimal() ) ""
@@ -296,7 +296,7 @@ fun AdminPanelItemsEditScreen(
                                     hint = Strings.CONTAINS,
                                     isTextCentered = true,
                                     onTextValueChange = {
-                                        productViewModel.onEvent(ProductUiEvent.ItemStoredChanged(it))
+                                        productViewModel.onEvent(ProductUiEvent.ChangeItemStored(it))
                                     },
                                     textValue =
                                         if (product.quantityAvailable == 0) ""
@@ -313,7 +313,7 @@ fun AdminPanelItemsEditScreen(
                             hint = Strings.DESCRIPTION,
                             isTextCentered = false,
                             onTextValueChange = {
-                                productViewModel.onEvent(ProductUiEvent.ItemDescriptionChanged(it))
+                                productViewModel.onEvent(ProductUiEvent.ChangeItemDescription(it))
                             },
                             textValue = product.description
                         )

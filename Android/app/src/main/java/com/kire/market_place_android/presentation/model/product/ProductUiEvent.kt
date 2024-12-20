@@ -1,16 +1,50 @@
 package com.kire.market_place_android.presentation.model.product
 
+import com.kire.market_place_android.presentation.util.VProductType
+
+sealed interface ItemFields {
+    var value: String
+    val category: VProductType
+}
+
 sealed class ProductUiEvent {
 
-    data class ItemNameChanged(var itemName: String): ProductUiEvent()
-    data class ItemCategoryChanged(var itemCategory: String): ProductUiEvent()
-    data class ItemPriceChanged(var itemPrice: String): ProductUiEvent()
-    data class ItemDiscountPriceChanged(var itemDiscountPrice: String): ProductUiEvent()
-    data class ItemMeasureChanged(var itemUnit: String): ProductUiEvent()
-    data class ItemStoredChanged(var itemStored: String): ProductUiEvent()
-    data class ItemDescriptionChanged(var itemDescription: String): ProductUiEvent()
+    data class ChangeItemName(
+        override var value: String,
+        override val category: VProductType
+    ) : ProductUiEvent(), ItemFields
 
-    data class SelectItem(val item: Product): ProductUiEvent()
-    data class AddItem(var image: ByteArray, var item: Product): ProductUiEvent()
-    data class DeleteItem(var item: Product): ProductUiEvent()
+    data class ChangeItemCategory(
+        override var value: String,
+        override val category: VProductType
+    ) : ProductUiEvent(), ItemFields
+
+    data class ChangeItemPrice(
+        override var value: String,
+        override val category: VProductType
+    ) : ProductUiEvent(), ItemFields
+
+    data class ChangeItemDiscountPrice(
+        override var value: String,
+        override val category: VProductType
+    ) : ProductUiEvent(), ItemFields
+
+    data class ChangeItemMeasure(
+        override var value: String,
+        override val category: VProductType
+    ) : ProductUiEvent(), ItemFields
+
+    data class ChangeItemStored(
+        override var value: String,
+        override val category: VProductType
+    ) : ProductUiEvent(), ItemFields
+
+    data class ChangeItemDescription(
+        override var value: String,
+        override val category: VProductType
+    ) : ProductUiEvent(), ItemFields
+
+    data class SelectItem(val item: Product) : ProductUiEvent()
+    data class AddItem(var image: ByteArray, var item: Product) : ProductUiEvent()
+    data class DeleteItem(var item: Product) : ProductUiEvent()
 }

@@ -13,6 +13,7 @@ import com.kire.market_place_android.presentation.model.order.Order
 import com.kire.market_place_android.presentation.model.order.OrderedProduct
 import com.kire.market_place_android.presentation.model.product.Product
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -32,7 +33,7 @@ class OrderViewModel @Inject constructor(
     val orders: StateFlow<List<Order>> = _orders.asStateFlow()
 
     fun getOrders() =
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             _requestResult.value = commonUseCases.getOrdersUseCase().toPresentation<List<OrderDomain>>()
                 .also { result ->
                     if (result is IRequestResult.Success<*>)
@@ -42,12 +43,12 @@ class OrderViewModel @Inject constructor(
                 }
         }
 
-    fun makeRequestResultIdle() {
+    fun makeRequestResultIdle() = viewModelScope.launch(Dispatchers.Default) {
         _requestResult.value = IRequestResult.Idle
     }
 
     fun createOrder(pickUpPointId: Int, orderedProducts: List<Product>, orderPrice: BigDecimal) =
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             _requestResult.value = commonUseCases.createOrderUseCase(
                 pickUpPointId = pickUpPointId,
                 orderedProducts = orderedProducts.toListOrderedProduct().toDomain(),

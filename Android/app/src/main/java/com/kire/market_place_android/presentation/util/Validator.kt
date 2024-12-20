@@ -5,7 +5,11 @@ object Validator {
         require(phone.isNotEmpty()) {
             "Заполните поле номера телефона"
         }
-        require(Regex("^(\\+)?((\\d{2,3}) ?\\d|\\d)(([ -]?\\d)|( ?(\\d{2,3}) ?)){5,12}\\d$").matches(phone)) {
+        require(
+            Regex("^(\\+)?((\\d{2,3}) ?\\d|\\d)(([ -]?\\d)|( ?(\\d{2,3}) ?)){5,12}\\d$").matches(
+                phone
+            )
+        ) {
             "Неправильный номер телефона"
         }
         require(phone.length <= 20) {
@@ -41,13 +45,17 @@ object Validator {
         require(password.isNotEmpty()) {
             "Введите пароль"
         }
-        require(password.length >= 8){
+        require(password.length >= 8) {
             "Длина пароля должна быть от 8 символов"
         }
-        require(password.length <= 100){
+        require(password.length <= 100) {
             "Длина пароля не должна превышать 100 символов"
         }
-        require(Regex("^[a-zA-Z0-9!@#\$%^&*()_+\\-=\\[\\]{};':\"\\\\|,.<>\\/?`~]{8,100}\$").matches(password)) {
+        require(
+            Regex("^[a-zA-Z0-9!@#\$%^&*()_+\\-=\\[\\]{};':\"\\\\|,.<>\\/?`~]{8,100}\$").matches(
+                password
+            )
+        ) {
             "Неправильный пароль"
         }
     }
@@ -74,6 +82,7 @@ object Validator {
             "ID должно состоять только из цифр"
         }
     }
+
     fun validatePickUpPointAddress(address: String) {
         require(address.isNotEmpty()) {
             "Заполните поле адреса пункта выдачи"
@@ -86,12 +95,39 @@ object Validator {
         }
     }
 
-    fun validateOrderCode(orderCode: String) {
-        require(orderCode.isNotEmpty()) {
+    fun validateNumber(number: String) {
+        require(number.isNotEmpty()) {
             "Введите код заказа"
         }
-        require(Regex("\\d+").matches(orderCode)) {
+        require(Regex("\\d+").matches(number)) {
             "Код должен состоять только из цифр"
         }
     }
 }
+
+enum class VProductType {
+    ITEM_CATEGORY,
+    ITEM_DESCRIPTION,
+    ITEM_PRICE,
+    ITEM_UNIT,
+    ITEM_NAME,
+    ITEM_QUANTITY
+}
+
+fun String.isProductValid(type: VProductType): Boolean =
+    try {
+
+        when (type) {
+            VProductType.ITEM_CATEGORY,
+            VProductType.ITEM_DESCRIPTION,
+            VProductType.ITEM_NAME,
+            VProductType.ITEM_UNIT -> Validator.validateName(this)
+
+            VProductType.ITEM_PRICE,
+            VProductType.ITEM_QUANTITY -> Validator.validateNumber(this)
+        }
+
+        true
+    } catch (e: IllegalArgumentException) {
+        false
+    }

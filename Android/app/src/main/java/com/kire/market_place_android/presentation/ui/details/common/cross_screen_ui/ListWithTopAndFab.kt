@@ -15,10 +15,13 @@ import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.material3.Text
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -32,6 +35,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.zIndex
 
 import com.kire.market_place_android.presentation.constant.Strings
 
@@ -42,26 +46,24 @@ import kotlin.math.roundToInt
 
 
 /**
- * Контейнер-список с топ баром и плавающей кнопкой
+ * Контейнер с верхним баром и плавающей кнопкой
  *
- * @param listSize размер списка
- * @param paddingValues отступы от краев экрана
+ * @param contentIsEmpty флаг того, что ничего нет и нужно оповестить пользователя об этом
+ * @param fullyExpandBars делает верхний бар и плавающую кнопку полностью видимыми
  * @param topBar верхний бар
  * @param floatingButton плавающая кнопка
- * @param content основной контент экрана
+ * @param content основной контент
  *
- * @author Michael Gontarev (KiREHwYE)
+ * @author Михаил Гонтарев (KiREHwYE)
  */
 @Composable
-fun ListWithTopAndFab(
-    listSize: Int = 0,
-    paddingValues: PaddingValues = PaddingValues(start = 28.dp, end = 28.dp),
+fun ContentWithTopAndFab(
+    fullyExpandBars: () -> Boolean = { false },
     topBar: @Composable () -> Unit = {},
-    floatingButton: @Composable (() -> Unit) -> Unit = {},
-    content: @Composable (Modifier) -> Unit = {},
+    floatingButton: @Composable () -> Unit = {},
+    content: @Composable (Modifier, (Boolean) -> Unit) -> Unit = { _, _ -> },
 ) {
 
-    /** область выполнения корутин */
     val coroutineScope = rememberCoroutineScope()
 
     /** измерения контейнера в пикселях */
@@ -69,13 +71,19 @@ fun ListWithTopAndFab(
 
     /** высота верхнего бара в пикселях*/
     val topBarHeightPx = remember { mutableStateOf(0f) }
-
     /** свдиг верхнего бара по высоте */
     val topBarOffsetHeightPx = remember { mutableStateOf(0f) }
+    /** динамический отступ для списка */
+    val spaceHeight = remember {
+        (topBarHeightPx.value + topBarOffsetHeightPx.value) / localDensity.density
+    }
+    /** отступ верхней системной панели навигации */
+    val topInsetPaddingPx = with(LocalDensity.current) {
+        WindowInsets.navigationBars.asPaddingValues().calculateTopPadding().toPx()
+    }
 
     /** высота плавающей кнопки в пикселях */
-    val fabHeightPx = remember { mutableStateOf(0f) }
-
+    val fabWidthPx = remember { mutableStateOf(0f) }
     /** свдиг нижнего бара по высоте */
     val fabOffsetHeightPx = remember { mutableStateOf(0f) }
 
@@ -84,23 +92,44 @@ fun ListWithTopAndFab(
         WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding().toPx()
     }
 
-    /** динамический отступ для списка */
-    val spaceHeight = remember {
-        derivedStateOf {
-            (topBarHeightPx.value + topBarOffsetHeightPx.value) / localDensity.density
+    /** Поднимает верхний бар, скрывая его из области видимости */
+    fun shiftTopBarUp() {
+        coroutineScope.launch {
+            while (-topBarOffsetHeightPx.value < topBarHeightPx.value) {
+                val newTopBarOffset = (topBarOffsetHeightPx.value - 5).coerceIn(
+                    minimumValue = -topBarHeightPx.value,
+                    maximumValue = 0f
+                )
+                topBarOffsetHeightPx.value = newTopBarOffset
+                delay(1)
+            }
         }
     }
 
-    /** функция для сдвига бара навигации за нижнюю область экрана */
-    fun shiftButtonDown() {
-        var value = -fabHeightPx.value - bottomInsetPaddingPx
-
+    /** Опускает верхний бар, делая его полностью видимым */
+    fun shiftTopBarDown() {
         coroutineScope.launch {
-            while (value < 0) {
-                fabOffsetHeightPx.value -= 1
-                value += 1f
+            while (topBarOffsetHeightPx.value < 0) {
+                topBarOffsetHeightPx.value += 5
                 delay(1)
             }
+        }
+    }
+
+    /** Опускает плавающую кнопку, скрывая ее из области видимости */
+    fun shiftFloatingButtonDown() {
+        coroutineScope.launch {
+            while (fabOffsetHeightPx.value < 0) {
+                fabOffsetHeightPx.value += 5
+                delay(1)
+            }
+        }
+    }
+
+    LaunchedEffect(key1 = fullyExpandBars()) {
+        if (fullyExpandBars()) {
+            launch { shiftTopBarDown() }
+            launch { shiftFloatingButtonDown() }
         }
     }
 
@@ -108,18 +137,18 @@ fun ListWithTopAndFab(
     val nestedScrollConnection = remember {
         object : NestedScrollConnection {
             override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
-                val delta = available.y
+                val deltaY = available.y
 
-                val newBottomBarOffset = fabOffsetHeightPx.value + delta
+                val newBottomBarOffset = fabOffsetHeightPx.value + deltaY
                 fabOffsetHeightPx.value =
                     newBottomBarOffset.coerceIn(
-                        minimumValue = -fabHeightPx.value - bottomInsetPaddingPx,
+                        minimumValue = -fabWidthPx.value,
                         maximumValue = 0f
                     )
 
-                var consumed = Offset.Zero
+                var consumed: Offset
 
-                val newTopBarOffset = (topBarOffsetHeightPx.value + delta).coerceIn(
+                val newTopBarOffset = (topBarOffsetHeightPx.value + deltaY).coerceIn(
                     minimumValue = -topBarHeightPx.value,
                     maximumValue = 0f
                 )
@@ -131,39 +160,31 @@ fun ListWithTopAndFab(
         }
     }
 
+    val noElementsMessageTopPadding by rememberDerivedStateOf {
+        (topBarHeightPx.value / localDensity.density).dp
+    }
+
+    var isEmpty by remember {
+        mutableStateOf(false)
+    }
+
     ///////////////////////////////////////////////////////////////////////////////////////////
     // Основной контент
     //////////////////////////////////////////////////////////////////////////////////////////
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(color = Color.White)
-            .padding(paddingValues)
+            .background(color = White)
             .nestedScroll(nestedScrollConnection)
     ) {
-        when (listSize) {
-            0 -> {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(top = spaceHeight.value.dp),
-                    contentAlignment = Alignment.Center,
-                    content = {
-                        Text(
-                            text = Strings.NOTHING_WAS_FOUND,
-                            fontSize = 16.sp,
-                            color = Color.DarkGray
-                        )
-                    }
-                )
-            }
-            else -> {
-                content(
-                    Modifier
-                        .padding(top = spaceHeight.value.dp)
-                        .fillMaxSize()
-                )
-            }
+        content(
+            Modifier
+                .zIndex(0f)
+                .dynamicPadding(top = { spaceHeight.value.dp })
+                .padding(horizontal = Dimens.uniPadding)
+                .fillMaxSize()
+        ) { bool ->
+            isEmpty = bool
         }
 
         ///////////////////////////////////////////////////////////////////////////////////////////
@@ -171,13 +192,20 @@ fun ListWithTopAndFab(
         //////////////////////////////////////////////////////////////////////////////////////////
         Box(
             modifier = Modifier
+                .zIndex(1f)
                 .wrapContentSize()
                 .background(color = Color.Transparent)
                 .onGloballyPositioned {
                     topBarHeightPx.value = it.size.height.toFloat()
                 }
                 .align(alignment = Alignment.TopCenter)
-                .offset { IntOffset(x = 0, y = topBarOffsetHeightPx.value.roundToInt()) },
+                .offset {
+                    IntOffset(
+                        x = 0,
+                        y = (topBarOffsetHeightPx.value + topInsetPaddingPx).roundToInt()
+                    )
+                }
+                .padding(horizontal = Dimens.uniPadding),
             contentAlignment = Alignment.Center
         ) {
             topBar()
@@ -191,15 +219,22 @@ fun ListWithTopAndFab(
                 .navigationBarsPadding()
                 .wrapContentSize()
                 .background(color = Color.Transparent)
-                .padding(28.dp)
+                .padding(bottom = Dimens.uniPadding)
+                .padding(horizontal = Dimens.uniPadding)
                 .onGloballyPositioned {
-                    fabHeightPx.value = it.size.height.toFloat() + with(localDensity) { 28.dp.toPx() }
+                    fabWidthPx.value =
+                        it.size.width.toFloat() + with(localDensity) { Dimens.uniPadding.toPx() }
                 }
-                .align(alignment = Alignment.BottomCenter)
-                .offset { IntOffset(x = 0, y = -fabOffsetHeightPx.value.roundToInt()) },
+                .align(alignment = Alignment.BottomEnd)
+                .offset {
+                    IntOffset(
+                        x = 0,
+                        y = -(fabOffsetHeightPx.value + bottomInsetPaddingPx).roundToInt()
+                    )
+                },
             contentAlignment = Alignment.Center
         ) {
-            floatingButton(::shiftButtonDown)
+            floatingButton()
         }
     }
 }

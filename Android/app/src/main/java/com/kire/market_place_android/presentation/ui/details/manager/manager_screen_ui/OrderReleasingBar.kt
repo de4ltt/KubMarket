@@ -3,7 +3,6 @@ package com.kire.market_place_android.presentation.ui.details.manager.manager_sc
 import android.widget.Toast
 import android.widget.Toast.LENGTH_SHORT
 import androidx.compose.foundation.background
-import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -33,10 +32,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -151,7 +148,7 @@ fun OrderReleasingBar(
                     .size(18.dp)
                     .bounceClick {
                         try {
-                            Validator.validateOrderCode(orderCode = orderCode)
+                            Validator.validateNumber(number = orderCode)
                             onClick(orderCode.toInt())
                         } catch (e: IllegalArgumentException) {
                             Toast.makeText(

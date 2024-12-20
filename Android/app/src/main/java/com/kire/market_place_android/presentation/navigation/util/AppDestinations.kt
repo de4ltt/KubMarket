@@ -17,7 +17,7 @@ import com.kire.test.R
 import com.ramcosta.composedestinations.spec.DirectionDestinationSpec
 
 /**
- * Доступные в зависимости от роли экраны
+ * Доступные, в зависимости от роли, экраны
  *
  * @author Michael Gontarev (KiREHwYE)*/
 sealed interface AppDestinations {
